@@ -1,0 +1,1911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>The Rounds – BarBuzzer</title>
+  <meta name="description" content="The Rounds: a free bar-themed Connections word puzzle. Group 16 words into 4 secret categories. Daily challenge and continuous mode with streak tracking — solo or with friends.">
+
+  <!-- Favicon -->
+  <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+
+  <style>
+    /* ===== NEON TAVERN THEME VARIABLES ===== */
+    :root {
+      --bg: #0d0d0d;
+      --tile-bg: #1e1e1e;
+      --tile-selected: #3a3218;
+      --tile-text: #f5f0e8;
+      --tile-border: #8B6914;
+      --header-text: #f5f0e8;
+      --muted: #9a9a8a;
+
+      /* Neon Solve Colors */
+      --yellow:  #FFD700;
+      --green:   #ADFF2F;
+      --blue:    #00F5FF;
+      --purple:  #FF00FF;
+
+      --toast-bg: rgba(15, 15, 15, 0.97);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--header-text);
+      font-family: Inter, system-ui, -apple-system, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ===== HEADER ===== */
+    #game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    #game-header h1 {
+      font-size: 1.5rem;
+      font-weight: 900;
+      letter-spacing: 0.06em;
+      color: #FFD700;
+      text-shadow: 0 0 10px rgba(255,215,0,0.4);
+    }
+
+    #game-header .header-sub {
+      font-size: 0.75rem;
+      color: var(--muted);
+      display: block;
+      letter-spacing: 0.04em;
+    }
+
+    .home-link {
+      color: var(--muted);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.2s;
+    }
+
+    .home-link:hover { color: var(--header-text); }
+
+    /* ===== MODE SELECTOR ===== */
+    #mode-selector {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.875rem 1rem;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+    }
+
+    .mode-btn {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      color: var(--muted);
+      border-radius: 2rem;
+      padding: 0.4rem 1.1rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.02em;
+    }
+
+    .mode-btn.active {
+      border-color: #FFD700;
+      color: #FFD700;
+      background: rgba(255,215,0,0.08);
+    }
+
+    .mode-btn:hover:not(.active) {
+      border-color: rgba(255,255,255,0.35);
+      color: var(--header-text);
+    }
+
+    /* ===== MODE LABEL ===== */
+    #mode-label {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 0.5rem 1rem 0;
+      min-height: 1.5rem;
+      letter-spacing: 0.03em;
+    }
+
+    /* ===== MAIN AREA ===== */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 1rem;
+      max-width: 500px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ===== LIVES ===== */
+    #lives-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    #lives-icons {
+      display: flex;
+      gap: 0.25rem;
+      font-size: 1.25rem;
+    }
+
+    .life { transition: opacity 0.3s, filter 0.3s, transform 0.3s; }
+    .life.lost {
+      opacity: 0.3;
+      filter: grayscale(1);
+    }
+    .life.shattering {
+      animation: shatter 0.4s ease-out forwards;
+    }
+
+    @keyframes shatter {
+      0%   { transform: scale(1); opacity: 1; }
+      25%  { transform: scale(1.3) rotate(-10deg); opacity: 0.9; }
+      50%  { transform: scale(0.8) rotate(15deg); opacity: 0.6; }
+      75%  { transform: scale(1.1) rotate(-5deg); opacity: 0.4; }
+      100% { transform: scale(1); opacity: 0.3; filter: grayscale(1); }
+    }
+
+    /* ===== SOLVED BARS ===== */
+    #solved-area {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .solved-bar {
+      width: 100%;
+      border-radius: 0.5rem;
+      padding: 0.75rem 1rem;
+      text-align: center;
+      font-weight: 800;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+      color: #0d0d0d;
+      animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, neonFlicker 0.6s ease-out 0.35s;
+    }
+
+    .solved-bar .bar-words {
+      font-size: 0.7rem;
+      font-weight: 600;
+      opacity: 0.85;
+      letter-spacing: 0.06em;
+      margin-top: 0.2rem;
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    @keyframes neonFlicker {
+      0%   { opacity: 1; }
+      10%  { opacity: 0.7; }
+      20%  { opacity: 1; }
+      35%  { opacity: 0.6; }
+      50%  { opacity: 1; }
+      65%  { opacity: 0.8; }
+      80%  { opacity: 1; }
+      90%  { opacity: 0.85; }
+      100% { opacity: 1; }
+    }
+
+    /* ===== TILE GRID ===== */
+    #tile-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.5rem;
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    .tile {
+      background: var(--tile-bg);
+      border: 1.5px solid var(--tile-border);
+      border-radius: 0.5rem;
+      color: var(--tile-text);
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-align: center;
+      cursor: pointer;
+      padding: 0;
+      min-height: 3.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      word-break: break-word;
+      line-height: 1.2;
+    }
+
+    @media (min-width: 400px) {
+      .tile { font-size: 0.95rem; min-height: 4rem; }
+    }
+
+    .tile:hover:not(:disabled) {
+      border-color: rgba(255, 215, 0, 0.5);
+      box-shadow: 0 0 8px rgba(255, 215, 0, 0.15);
+    }
+
+    .tile.selected {
+      background: var(--tile-selected);
+      border-color: #FFD700;
+      box-shadow: 0 0 12px rgba(255, 215, 0, 0.35);
+      transform: scale(1.04);
+    }
+
+    .tile.disabled {
+      pointer-events: none;
+      opacity: 0.4;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      15%       { transform: translateX(-6px); }
+      30%       { transform: translateX(6px); }
+      45%       { transform: translateX(-5px); }
+      60%       { transform: translateX(5px); }
+      75%       { transform: translateX(-3px); }
+      90%       { transform: translateX(3px); }
+    }
+
+    .tile.shake { animation: shake 0.5s ease-in-out; }
+
+    /* ===== BUTTONS ===== */
+    #controls {
+      display: flex;
+      gap: 0.75rem;
+      width: 100%;
+      margin-bottom: 0.75rem;
+    }
+
+    .ctrl-btn {
+      flex: 1;
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 0.5rem;
+      color: var(--header-text);
+      font-size: 0.85rem;
+      font-weight: 700;
+      padding: 0.7rem 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.03em;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 2.75rem;
+    }
+
+    .ctrl-btn:hover:not(:disabled) {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.4);
+    }
+
+    .ctrl-btn:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+
+    #submit-btn {
+      border-color: #FFD700;
+      color: #FFD700;
+    }
+
+    #submit-btn:hover:not(:disabled) {
+      background: rgba(255,215,0,0.12);
+    }
+
+    #submit-btn:disabled {
+      border-color: rgba(255,215,0,0.3);
+      color: rgba(255,215,0,0.4);
+    }
+
+    /* ===== XP BAR ===== */
+    #xp-bar-container {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding: 0.4rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    #xp-bar-info {
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      font-size: 0.7rem;
+      color: var(--muted);
+      line-height: 1.3;
+      min-width: 4.5rem;
+    }
+
+    #xp-level-label {
+      font-weight: 800;
+      color: #FFD700;
+      font-size: 0.75rem;
+    }
+
+    #xp-track {
+      flex: 1;
+      height: 10px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    #xp-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #c8a800, #FFD700, #FFE878);
+      border-radius: 999px;
+      width: 0%;
+      transition: width 1s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #stats-btn {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      border-radius: 50%;
+      color: var(--muted);
+      font-size: 0.9rem;
+      width: 2rem;
+      height: 2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+
+    #stats-btn:hover {
+      border-color: #FFD700;
+      color: #FFD700;
+    }
+
+    /* ===== STATS MODAL ===== */
+    #stats-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.78);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #stats-modal.show {
+      display: flex;
+    }
+
+    .stats-box {
+      background: #222;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 1rem;
+      padding: 1.75rem 1.5rem;
+      max-width: 320px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .stats-box h2 {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: #FFD700;
+      margin-bottom: 0.25rem;
+    }
+
+    .stats-rank {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 1.2rem;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .stat-item {
+      background: rgba(255,255,255,0.04);
+      border-radius: 0.5rem;
+      padding: 0.6rem 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 900;
+      color: #FFD700;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .share-btn {
+      width: 100%;
+      background: rgba(255,215,0,0.12);
+      border: 2px solid #FFD700;
+      border-radius: 0.5rem;
+      color: #FFD700;
+      font-size: 0.9rem;
+      font-weight: 800;
+      padding: 0.65rem;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: background 0.2s;
+      margin-bottom: 0.6rem;
+    }
+
+    .share-btn:hover { background: rgba(255,215,0,0.22); }
+
+    .close-stats-btn {
+      width: 100%;
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 0.5rem;
+      color: var(--muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.55rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .close-stats-btn:hover {
+      border-color: rgba(255,255,255,0.35);
+      color: var(--header-text);
+    }
+
+    /* ===== EXPERIENCE GAINED OVERLAY ===== */
+    #xp-summary {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.82);
+      z-index: 250;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #xp-summary.show {
+      display: flex;
+    }
+
+    .xp-summary-box {
+      background: #222;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 1rem;
+      padding: 2rem 1.75rem;
+      max-width: 340px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .xp-summary-box h2 {
+      font-size: 1.6rem;
+      font-weight: 900;
+      color: #FFD700;
+      margin-bottom: 0.25rem;
+    }
+
+    .xp-summary-subtitle {
+      color: var(--muted);
+      font-size: 0.85rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .xp-gains-list {
+      text-align: left;
+      margin-bottom: 1.25rem;
+    }
+
+    .xp-gain-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.35rem 0;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.85rem;
+    }
+
+    .xp-gain-row:last-child { border-bottom: none; }
+
+    .xp-gain-label { color: var(--header-text); }
+
+    .xp-gain-value {
+      font-weight: 800;
+      color: #FFD700;
+    }
+
+    .xp-total-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      background: rgba(255,215,0,0.08);
+      border-radius: 0.5rem;
+      font-weight: 800;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .xp-total-label { color: var(--header-text); }
+
+    .xp-total-value {
+      color: #FFD700;
+      font-size: 1.1rem;
+    }
+
+    /* Mini XP bar inside summary */
+    #summary-xp-track {
+      height: 12px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+      margin-bottom: 0.4rem;
+    }
+
+    #summary-xp-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #c8a800, #FFD700, #FFE878);
+      border-radius: 999px;
+      width: 0%;
+      transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #summary-level-label {
+      font-size: 0.72rem;
+      color: var(--muted);
+      text-align: right;
+      margin-bottom: 1rem;
+      letter-spacing: 0.03em;
+    }
+
+    .summary-action-btn {
+      width: 100%;
+      background: rgba(255,215,0,0.12);
+      border: 2px solid #FFD700;
+      border-radius: 0.5rem;
+      color: #FFD700;
+      font-size: 1rem;
+      font-weight: 800;
+      padding: 0.75rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: background 0.2s;
+    }
+
+    .summary-action-btn:hover { background: rgba(255,215,0,0.22); }
+
+    /* ===== NEXT ROUND BUTTON ===== */
+    #next-btn {
+      display: none;
+      width: 100%;
+      background: rgba(255,215,0,0.12);
+      border: 2px solid #FFD700;
+      border-radius: 0.5rem;
+      color: #FFD700;
+      font-size: 1rem;
+      font-weight: 800;
+      padding: 0.875rem 1rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      text-align: center;
+      transition: all 0.2s;
+      touch-action: manipulation;
+      margin-bottom: 0.75rem;
+    }
+
+    #next-btn:hover {
+      background: rgba(255,215,0,0.22);
+    }
+
+    /* ===== STREAK DISPLAY ===== */
+    #streak-display {
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-align: center;
+      letter-spacing: 0.03em;
+      padding: 0.25rem 0;
+    }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position: fixed;
+      bottom: 5rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--toast-bg);
+      color: var(--header-text);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 0.5rem;
+      padding: 0.6rem 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+      z-index: 100;
+      white-space: nowrap;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ===== GAME-OVER OVERLAY ===== */
+    #game-over {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.78);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game-over.show {
+      display: flex;
+    }
+
+    .go-box {
+      background: #222;
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 1rem;
+      padding: 2rem 1.75rem;
+      max-width: 340px;
+      width: 90%;
+      text-align: center;
+    }
+
+    .go-box h2 {
+      font-size: 2rem;
+      font-weight: 900;
+      margin-bottom: 0.5rem;
+    }
+
+    .go-box .go-msg {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+      line-height: 1.5;
+    }
+
+    .go-box .go-answers {
+      text-align: left;
+      margin-bottom: 1.25rem;
+    }
+
+    .go-answer-row {
+      border-radius: 0.375rem;
+      padding: 0.45rem 0.75rem;
+      margin-bottom: 0.4rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #fff;
+    }
+
+    .go-answer-row .go-cat { font-size: 0.85rem; margin-bottom: 0.1rem; }
+    .go-answer-row .go-words { font-weight: 500; opacity: 0.85; font-size: 0.72rem; }
+
+    .go-btn {
+      width: 100%;
+      background: rgba(255, 215, 0, 0.12);
+      border: 2px solid #FFD700;
+      border-radius: 0.5rem;
+      color: #FFD700;
+      font-size: 1rem;
+      font-weight: 800;
+      padding: 0.875rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: background 0.2s;
+      min-height: 3rem;
+      touch-action: manipulation;
+    }
+
+    .go-btn:hover { background: rgba(255, 215, 0, 0.22); }
+
+    /* ===== SEE YOU TOMORROW MODAL ===== */
+    #see-you-tomorrow {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 400;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #see-you-tomorrow.show {
+      display: flex;
+    }
+
+    .syt-box {
+      background: #111;
+      border: 2px solid #FFD700;
+      border-radius: 1rem;
+      padding: 2.5rem 2rem;
+      max-width: 340px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 0 40px rgba(255, 215, 0, 0.2), 0 0 80px rgba(255, 215, 0, 0.1);
+    }
+
+    .syt-box h2 {
+      font-size: 2rem;
+      font-weight: 900;
+      color: #FFD700;
+      text-shadow: 0 0 20px rgba(255, 215, 0, 0.7), 0 0 40px rgba(255, 215, 0, 0.4);
+      margin-bottom: 0.5rem;
+    }
+
+    .syt-emoji {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 0.75rem;
+      animation: neonFlicker 2s ease-in-out infinite;
+    }
+
+    .syt-msg {
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .syt-streak {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #FFD700;
+      margin-bottom: 1.25rem;
+    }
+
+    .syt-btn {
+      width: 100%;
+      background: rgba(255, 215, 0, 0.12);
+      border: 2px solid #FFD700;
+      border-radius: 0.5rem;
+      color: #FFD700;
+      font-size: 1rem;
+      font-weight: 800;
+      padding: 0.875rem;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      transition: background 0.2s;
+      min-height: 3rem;
+      touch-action: manipulation;
+    }
+
+    .syt-btn:hover { background: rgba(255, 215, 0, 0.22); }
+  </style>
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <!-- ===== Header ===== -->
+  <header id="game-header" role="banner">
+    <div>
+      <h1>The Rounds 🍺</h1>
+      <span class="header-sub">Bar Word Grouping Game</span>
+    </div>
+    <a href="/" class="home-link" aria-label="Back to BarBuzzer home">← Home</a>
+  </header>
+
+  <!-- ===== Mode selector ===== -->
+  <div id="mode-selector" role="group" aria-label="Game mode selection">
+    <button class="mode-btn active" data-mode="daily"      aria-pressed="true">📅 Daily</button>
+    <button class="mode-btn"        data-mode="continuous" aria-pressed="false">🔁 Continuous</button>
+  </div>
+
+  <!-- ===== XP Bar ===== -->
+  <div id="xp-bar-container" aria-label="Experience points">
+    <div id="xp-bar-info">
+      <span id="xp-level-label">Lv 1</span>
+      <span id="xp-text">0 / 1000 XP</span>
+    </div>
+    <div id="xp-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="XP progress">
+      <div id="xp-fill"></div>
+    </div>
+    <button id="stats-btn" aria-label="View stats">📊</button>
+  </div>
+
+  <!-- ===== Mode label / info ===== -->
+  <div id="mode-label" aria-live="polite"></div>
+
+  <!-- ===== Toast ===== -->
+  <div id="toast" role="status" aria-live="polite"></div>
+
+  <!-- ===== Main Game Area ===== -->
+  <main role="main" aria-label="The Rounds game board">
+
+    <!-- Lives -->
+    <div id="lives-bar" aria-label="Lives remaining">
+      <span>Lives:</span>
+      <div id="lives-icons" aria-live="polite">
+        <span class="life" aria-label="life">🍺</span>
+        <span class="life" aria-label="life">🍺</span>
+        <span class="life" aria-label="life">🍺</span>
+        <span class="life" aria-label="life">🍺</span>
+      </div>
+    </div>
+
+    <!-- Solved category bars appear here -->
+    <div id="solved-area" aria-live="polite" aria-label="Solved categories"></div>
+
+    <!-- 4×4 tile grid -->
+    <div id="tile-grid" role="grid" aria-label="Word tiles, select four to find a category"></div>
+
+    <!-- Shuffle / Deselect / Submit -->
+    <div id="controls">
+      <button id="shuffle-btn" class="ctrl-btn" aria-label="Shuffle remaining tiles">Shuffle</button>
+      <button id="deselect-btn" class="ctrl-btn" aria-label="Deselect all tiles" disabled>Deselect</button>
+      <button id="submit-btn"   class="ctrl-btn" aria-label="Submit selected tiles" disabled>Submit</button>
+    </div>
+
+    <!-- Next Round (continuous mode) -->
+    <button id="next-btn" aria-label="Load next puzzle">Next Round →</button>
+
+    <!-- Bar Streak -->
+    <div id="streak-display" aria-live="polite"></div>
+
+  </main>
+
+  <!-- ===== Stats Modal ===== -->
+  <div id="stats-modal" role="dialog" aria-modal="true" aria-labelledby="stats-title">
+    <div class="stats-box">
+      <h2 id="stats-title">📊 Bar Stats</h2>
+      <p class="stats-rank" id="stats-rank-label"></p>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value" id="stat-level">1</div>
+          <div class="stat-label">Level</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-xp">0</div>
+          <div class="stat-label">Total XP</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-wins">0</div>
+          <div class="stat-label">Total Wins</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value" id="stat-streak">0</div>
+          <div class="stat-label">Best Streak</div>
+        </div>
+      </div>
+      <button class="share-btn" id="share-btn" aria-label="Share stats">📤 Share My Stats</button>
+      <button class="close-stats-btn" id="close-stats-btn" aria-label="Close stats">Close</button>
+    </div>
+  </div>
+
+  <!-- ===== Experience Gained Overlay ===== -->
+  <div id="xp-summary" role="dialog" aria-modal="true" aria-labelledby="xps-title">
+    <div class="xp-summary-box">
+      <h2 id="xps-title">⭐ Experience Gained</h2>
+      <p class="xp-summary-subtitle" id="xps-subtitle"></p>
+      <div class="xp-gains-list" id="xps-gains-list"></div>
+      <div class="xp-total-row">
+        <span class="xp-total-label">Total XP Earned</span>
+        <span class="xp-total-value" id="xps-total">+0 XP</span>
+      </div>
+      <div id="summary-xp-track">
+        <div id="summary-xp-fill"></div>
+      </div>
+      <div id="summary-level-label"></div>
+      <button class="summary-action-btn" id="xps-action-btn" aria-label="Continue"></button>
+    </div>
+  </div>
+
+  <!-- ===== Game Over Overlay ===== -->
+  <div id="game-over" role="dialog" aria-modal="true" aria-labelledby="go-title">
+    <div class="go-box">
+      <h2 id="go-title"></h2>
+      <p class="go-msg" id="go-msg"></p>
+      <div class="go-answers" id="go-answers" aria-label="Category answers"></div>
+      <button class="go-btn" id="go-btn" aria-label="Close results">OK</button>
+    </div>
+  </div>
+
+  <!-- ===== See You Tomorrow Modal (Daily Mode Win) ===== -->
+  <div id="see-you-tomorrow" role="dialog" aria-modal="true" aria-labelledby="syt-title">
+    <div class="syt-box">
+      <span class="syt-emoji">🍻</span>
+      <h2 id="syt-title">See You Tomorrow!</h2>
+      <p class="syt-msg" id="syt-msg">You've conquered today's Daily Challenge. Come back tomorrow for a fresh round!</p>
+      <div class="syt-streak" id="syt-streak"></div>
+      <button class="syt-btn" id="syt-btn" aria-label="Close daily complete">Got it! 👋</button>
+    </div>
+  </div>
+
+  <div id="site-footer"></div>
+  <script src="/scripts/load-partials.js"></script>
+
+  <!-- ===== GAME GUIDE ===== -->
+  <section class="game-guide" aria-labelledby="rounds-guide-heading" style="max-width:600px;margin:2rem auto;padding:1.5rem 1.25rem;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;color:#f5f0e8;font-family:Inter,system-ui,sans-serif;line-height:1.7;">
+    <h2 id="rounds-guide-heading" style="color:#FFD700;font-size:1.4rem;font-weight:800;margin:0 0 0.75rem;">📖 The Rounds – Game Guide</h2>
+    <p style="margin:0 0 0.75rem;">The Rounds is a bar-themed word-grouping puzzle. Sixteen words appear on the board — your job is to find four groups of four words that share a hidden connection.</p>
+    <h3 style="color:#00F5FF;font-size:1rem;font-weight:700;margin:1rem 0 0.4rem;">How to Play</h3>
+    <ol style="margin:0 0 0.75rem;padding-left:1.4rem;">
+        <li>Study the 16 words displayed on the board.</li>
+        <li>Select four words you believe share a common theme or connection.</li>
+        <li>Press <strong>Submit Round</strong> to check your group.</li>
+        <li>Correct groups are removed from the board and colour-coded by difficulty.</li>
+        <li>Find all four groups to complete the puzzle!</li>
+    </ol>
+    <h3 style="color:#00F5FF;font-size:1rem;font-weight:700;margin:1rem 0 0.4rem;">Colour Difficulty Guide</h3>
+    <ul style="margin:0;padding-left:1.4rem;">
+        <li><span style="color:#FFD700;">🟡 Yellow</span> — Easiest group. Usually the most obvious connection.</li>
+        <li><span style="color:#ADFF2F;">🟢 Green</span> — Medium difficulty.</li>
+        <li><span style="color:#00F5FF;">🔵 Blue</span> — Harder — look for sneaky double meanings.</li>
+        <li><span style="color:#FF00FF;">🟣 Purple</span> — Hardest — tricky wordplay or bar-culture knowledge.</li>
+    </ul>
+  </section>
+
+  <script>
+  'use strict';
+
+  /* =====================================================
+     PUZZLE LIBRARY
+     ===================================================== */
+
+  const PUZZLES = [
+    {
+      id: 1,
+      categories: [
+        { name: 'Types of Beer',   color: 'yellow', words: ['LAGER',   'STOUT',    'PILSNER',   'PORTER']    },
+        { name: 'Cocktail Tools',  color: 'green',  words: ['SHAKER',  'JIGGER',   'STRAINER',  'MUDDLER']   },
+        { name: 'Classic Garnish', color: 'blue',   words: ['CHERRY',  'OLIVE',    'ONION',     'LEMON']     },
+        { name: 'Common ___',      color: 'purple', words: ['ROUND',   'HOUSE',    'CALL',      'SPECIAL']   },
+      ],
+    },
+    {
+      id: 2,
+      categories: [
+        { name: 'Cures',                    color: 'yellow', words: ['WATER',   'ASPIRIN',   'GREASE',    'SLEEP']     },
+        { name: 'Juices',                   color: 'green',  words: ['ORANGE',  'TOMATO',    'CLAMATO',   'GUAVA']     },
+        { name: 'Egg Styles',               color: 'blue',   words: ['POACHED', 'FRIED',     'SCRAMBLED', 'BOILED']    },
+        { name: 'Bloody Mary Ingredients',  color: 'purple', words: ['VODKA',   'CELERY',    'TABASCO',   'WORCESTER'] },
+      ],
+    },
+    {
+      id: 3,
+      categories: [
+        { name: 'Games',             color: 'yellow', words: ['DARTS',   'POOL',    'PINBALL',  'KARAOKE']  },
+        { name: 'Seating',           color: 'green',  words: ['STOOL',   'BOOTH',   'BENCH',    'CHAIR']    },
+        { name: 'Bar Snacks',        color: 'blue',   words: ['PRETZEL', 'PEANUT',  'JERKY',    'POPCORN']  },
+        { name: 'Things that "Tap"', color: 'purple', words: ['DANCER',  'WATER',   'KEG',      'PHONE']    },
+      ],
+    },
+    {
+      id: 4,
+      categories: [
+        { name: 'Whiskies',          color: 'yellow', words: ['SCOTCH',   'BOURBON',    'IRISH',      'RYE']      },
+        { name: 'Wine Varieties',    color: 'green',  words: ['MERLOT',   'CHABLIS',    'MALBEC',     'RIOJA']    },
+        { name: 'Citrus Parts',      color: 'blue',   words: ['ZEST',     'TWIST',      'WEDGE',      'SLICE']    },
+        { name: 'Gin Brands',        color: 'purple', words: ['HENDRICK', 'TANQUERAY',  'BEEFEATER',  'AVIATION'] },
+      ],
+    },
+    {
+      id: 5,
+      categories: [
+        { name: 'Glassware',         color: 'yellow', words: ['PINT',    'FLUTE',    'COUPE',    'STEIN']    },
+        { name: 'Garnishes',         color: 'green',  words: ['OLIVE',   'ONION',    'TWIST',    'LIME']     },
+        { name: 'Bar Sports',        color: 'blue',   words: ['DARTS',   'POOL',     'PONG',     'SLOTS']    },
+        { name: 'Double ___',        color: 'purple', words: ['WHISKEY', 'BARREL',   'AGENT',    'TROUBLE']  },
+      ],
+    },
+    {
+      id: 6,
+      categories: [
+        { name: 'Hangover Cures',    color: 'yellow', words: ['PEDIALYTE', 'PICKLE',   'BANANA',   'COFFEE']   },
+        { name: 'Chasers',           color: 'green',  words: ['SPRITE',    'JUICE',    'SODA',     'BEER']     },
+        { name: 'Famous Whiskies',   color: 'blue',   words: ['JAMESON',   'JACK',     'MAKER',    'WILD']     },
+        { name: '___ Turkey',        color: 'purple', words: ['JIVE',      'COLD',     'ROAST',    'TALK']     },
+      ],
+    },
+    {
+      id: 7,
+      categories: [
+        { name: 'Words ending in BAR', color: 'yellow', words: ['CROWBAR',  'SIDEBAR', 'REBAR',   'HANDLEBAR'] },
+        { name: 'Tequila Types',       color: 'green',  words: ['BLANCO',   'REPOSADO','ANEJO',   'MEZCAL']    },
+        { name: 'Bar Tools',           color: 'blue',   words: ['OPENER',   'CORKSCREW','SPOUT',  'SPOON']     },
+        { name: 'Cocktail Bases',      color: 'purple', words: ['RUM',      'GIN',     'VODKA',   'TEQUILA']   },
+      ],
+    },
+    {
+      id: 8,
+      categories: [
+        { name: 'Dive Bar Games',    color: 'yellow', words: ['SHUFFLEBOARD', 'JENGA',   'CORNHOLE', 'FOOSBALL'] },
+        { name: 'Shot Names',        color: 'green',  words: ['JAGER',        'SLAMMER',  'KAMIKAZE', 'FIREBALL'] },
+        { name: 'Beer Styles',       color: 'blue',   words: ['IPA',          'WHEAT',   'SOUR',     'AMBER']    },
+        { name: '___ Drop',          color: 'purple', words: ['LEMON',        'CHERRY',  'TEAR',     'RAIN']     },
+      ],
+    },
+    {
+      id: 9,
+      categories: [
+        { name: 'Vodka Brands',      color: 'yellow', words: ['GREY GOOSE', 'ABSOLUT',  'SMIRNOFF', 'BELVEDERE'] },
+        { name: 'Rum Cocktails',     color: 'green',  words: ['MOJITO',     'DAIQUIRI', 'ZOMBIE',   'HURRICANE'] },
+        { name: 'Pub Snacks',        color: 'blue',   words: ['NACHOS',     'WINGS',    'SLIDERS',  'TOTS']      },
+        { name: 'Happy Hour ___',    color: 'purple', words: ['DEAL',       'SPECIAL',  'PRICE',    'DRINKS']    },
+      ],
+    },
+    {
+      id: 10,
+      categories: [
+        { name: 'Classic Cocktails', color: 'yellow', words: ['NEGRONI',   'SIDECAR',  'GIMLET',   'SLING']     },
+        { name: 'Wine Colors',       color: 'green',  words: ['RED',       'WHITE',    'ROSÉ',     'ORANGE']    },
+        { name: 'Bar Lingo',         color: 'blue',   words: ['NEAT',      'ROCKS',    'BACK',     'DIRTY']     },
+        { name: '___ Mule',          color: 'purple', words: ['MOSCOW',    'MEXICAN',  'DARK',     'KENTUCKY']  },
+      ],
+    },
+    {
+      id: 11,
+      categories: [
+        { name: 'Champagne Brands',  color: 'yellow', words: ['MOET',      'VEUVE',    'KRUG',     'PERRIER']   },
+        { name: 'Bartender Actions', color: 'green',  words: ['SHAKE',     'STIR',     'STRAIN',   'MUDDLE']    },
+        { name: 'Liqueur Flavors',   color: 'blue',   words: ['PEACH',     'TRIPLE',   'MELON',    'HAZELNUT']  },
+        { name: 'Irish ___',         color: 'purple', words: ['SETTER',    'CREAM',    'STEW',     'PUB']       },
+      ],
+    },
+    {
+      id: 12,
+      categories: [
+        { name: 'Closing Time ___',  color: 'yellow', words: ['LAST',      'CALL',     'ROUND',    'SHOT']      },
+        { name: 'Scotch Regions',    color: 'green',  words: ['ISLAY',     'HIGHLANDS','SPEYSIDE',  'LOWLANDS']  },
+        { name: 'Bitters Brands',    color: 'blue',   words: ['ANGOSTURA', 'PEYCHAUD', 'ORANGE',   'MOLE']      },
+        { name: '___ Sour',          color: 'purple', words: ['WHISKEY',   'AMARETTO', 'PISCO',    'GIN']       },
+      ],
+    },
+    {
+      id: 13,
+      categories: [
+        { name: 'Sparkling Waters',  color: 'yellow', words: ['PERRIER',   'PELLEGRINO','TOPO',    'BUBLY']     },
+        { name: 'Cocktail Syrups',   color: 'green',  words: ['GRENADINE', 'ORGEAT',   'FALERNUM', 'SIMPLE']    },
+        { name: 'Tall Drinks',       color: 'blue',   words: ['COLLINS',   'FIZZ',     'RICKEY',   'HIGHBALL']  },
+        { name: '___ & Tonic',       color: 'purple', words: ['GIN',       'VODKA',    'TEQUILA',  'MEZCAL']    },
+      ],
+    },
+    {
+      id: 14,
+      categories: [
+        { name: 'Beer Brands',       color: 'yellow', words: ['CORONA',    'HEINEKEN', 'STELLA',   'MODELO']    },
+        { name: 'Hangover Foods',    color: 'green',  words: ['POUTINE',   'RAMEN',    'PIZZA',    'TACOS']     },
+        { name: 'Craft Beer Hops',   color: 'blue',   words: ['CITRA',     'MOSAIC',   'SIMCOE',   'CENTENNIAL']},
+        { name: 'Bar Fights ___',    color: 'purple', words: ['BRAWL',     'STOOL',    'POOL CUE', 'SHINER']    },
+      ],
+    },
+    {
+      id: 15,
+      categories: [
+        { name: 'Margarita Styles',  color: 'yellow', words: ['FROZEN',    'SKINNY',   'SPICY',    'CLASSIC']   },
+        { name: 'Bar Staff',         color: 'green',  words: ['TENDER',    'BACK',     'BOUNCER',  'SERVER']     },
+        { name: 'Karaoke Songs ___', color: 'blue',   words: ['PIANO MAN', 'BOHEMIAN', 'ROXANNE',  'LIVIN']     },
+        { name: '___ Bar',           color: 'purple', words: ['CANDY',     'SAND',     'MINI',     'HANDLE']    },
+      ],
+    },
+    {
+      id: 16,
+      categories: [
+        { name: 'Sake Types',        color: 'yellow', words: ['JUNMAI',    'NIGORI',   'DAIGINJO', 'HONJOZO']   },
+        { name: 'Pub Night ___',     color: 'green',  words: ['QUIZ',      'TRIVIA',   'BINGO',    'KARAOKE']   },
+        { name: 'Absinthe ___',      color: 'blue',   words: ['LOUCHE',    'FAIRY',    'GREEN',    'RITUAL']    },
+        { name: 'Drinking Games',    color: 'purple', words: ['PONG',      'KINGS',    'QUARTERS', 'FLIP']      },
+      ],
+    },
+  ];
+
+  /* Color map — Neon Tavern palette */
+  const COLOR_HEX = {
+    yellow: '#FFD700',
+    green:  '#ADFF2F',
+    blue:   '#00F5FF',
+    purple: '#FF00FF',
+  };
+
+  /* =====================================================
+     STATE
+     ===================================================== */
+
+  let currentPuzzle   = null;
+  let solvedCategories = [];  // category objects that have been solved
+  let selectedWords   = [];
+  let lives           = 4;
+  let gameOver        = false;
+  let currentMode     = 'daily';  // 'daily' | 'continuous'
+
+  /* =====================================================
+     SEEDED RANDOM (simple mulberry32)
+     ===================================================== */
+
+  function mulberry32(seed) {
+    return function () {
+      seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+      let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function seededShuffle(arr, rand) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  /** Simple numeric hash from a string */
+  function hashString(str) {
+    let h = 0;
+    for (let i = 0; i < str.length; i++) {
+      h = (Math.imul(31, h) + str.charCodeAt(i)) | 0;
+    }
+    return Math.abs(h);
+  }
+
+  /* =====================================================
+     SHUFFLE (used for UI, no seed needed)
+     ===================================================== */
+
+  function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  /* =====================================================
+     PLAYER PROFILE (localStorage-backed)
+     ===================================================== */
+
+  const LS_PROFILE     = 'the_rounds_player_profile';
+  const LS_DAILY_WIN   = 'the_rounds_daily_win';
+  const LS_DAILY_DATE  = 'the_rounds_daily_date';
+  const LS_PLAYED_IDS  = 'the_rounds_played_ids';
+
+  const DEFAULT_PROFILE = {
+    xp: 0,
+    level: 1,
+    totalWins: 0,
+    totalGames: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    lastPlayedDate: null,   // YYYY-MM-DD
+    unlockedBadges: [],
+  };
+
+  function loadProfile() {
+    try {
+      const raw = localStorage.getItem(LS_PROFILE);
+      if (raw) return Object.assign({}, DEFAULT_PROFILE, JSON.parse(raw));
+    } catch (e) { /* ignore */ }
+    return Object.assign({}, DEFAULT_PROFILE);
+  }
+
+  function saveProfile(profile) {
+    try { localStorage.setItem(LS_PROFILE, JSON.stringify(profile)); }
+    catch (e) { /* ignore */ }
+  }
+
+  let playerProfile = loadProfile();
+
+  /* =====================================================
+     LEVEL / TITLE HELPERS
+     ===================================================== */
+
+  function xpForLevel(level) {
+    return level * 1000;
+  }
+
+  function getLevelTitle(level) {
+    if (level <= 3)  return 'Designated Driver';
+    if (level <= 7)  return 'Barfly';
+    if (level <= 12) return 'Social Butterfly';
+    if (level <= 19) return 'Mixologist';
+    return 'Bar Legend';
+  }
+
+  function addXP(amount) {
+    playerProfile.xp += amount;
+    // Level up loop
+    while (playerProfile.xp >= xpForLevel(playerProfile.level)) {
+      playerProfile.xp -= xpForLevel(playerProfile.level);
+      playerProfile.level += 1;
+    }
+    saveProfile(playerProfile);
+    updateXPBar();
+  }
+
+  /* =====================================================
+     STREAK HELPERS
+     ===================================================== */
+
+  function formatDateYMD(d) {
+    const y   = d.getFullYear();
+    const m   = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function todayYMD() {
+    return formatDateYMD(new Date());
+  }
+
+  function yesterdayYMD() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return formatDateYMD(d);
+  }
+
+  function checkAndUpdateStreak() {
+    const today = todayYMD();
+    const last  = playerProfile.lastPlayedDate;
+    if (last === yesterdayYMD()) {
+      playerProfile.currentStreak += 1;
+    } else if (last !== today) {
+      // Either null, or older than yesterday
+      playerProfile.currentStreak = 1;
+    }
+    // if last === today: same day, don't change streak
+    playerProfile.lastPlayedDate = today;
+    if (playerProfile.currentStreak > playerProfile.longestStreak) {
+      playerProfile.longestStreak = playerProfile.currentStreak;
+    }
+    saveProfile(playerProfile);
+  }
+
+  /* =====================================================
+     LEGACY COMPAT HELPERS
+     ===================================================== */
+
+  function todayString()   { return new Date().toDateString(); }
+  function hasDailyWin()   {
+    return localStorage.getItem(LS_DAILY_DATE) === todayString()
+        && localStorage.getItem(LS_DAILY_WIN)  === '1';
+  }
+  function saveDailyWin()  {
+    localStorage.setItem(LS_DAILY_DATE, todayString());
+    localStorage.setItem(LS_DAILY_WIN, '1');
+  }
+  function getPlayedIds()  {
+    try { return JSON.parse(localStorage.getItem(LS_PLAYED_IDS) || '[]'); }
+    catch (e) { return []; }
+  }
+  function addPlayedId(id) {
+    const ids = getPlayedIds();
+    if (!ids.includes(id)) {
+      ids.push(id);
+      localStorage.setItem(LS_PLAYED_IDS, JSON.stringify(ids));
+    }
+  }
+
+  /* =====================================================
+     PUZZLE SELECTION
+     ===================================================== */
+
+  function selectDailyPuzzle() {
+    const now = new Date();
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+    const dayOfYear = Math.round((now - startOfYear) / 86400000);
+    const idx = dayOfYear % PUZZLES.length;
+    return PUZZLES[idx];
+  }
+
+  function selectContinuousPuzzle() {
+    const played = getPlayedIds();
+    const unplayed = PUZZLES.filter(p => !played.includes(p.id));
+    const pool = unplayed.length > 0 ? unplayed : PUZZLES; // wrap around
+    if (unplayed.length === 0) {
+      // reset played list so we can cycle again
+      localStorage.removeItem(LS_PLAYED_IDS);
+    }
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  /* =====================================================
+     DOM HELPERS
+     ===================================================== */
+
+  const $  = id  => document.getElementById(id);
+  const $$ = sel => document.querySelectorAll(sel);
+
+  /* =====================================================
+     TOAST
+     ===================================================== */
+
+  let toastTimer = null;
+
+  function showToast(msg, duration = 2000) {
+    const toast = $('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), duration);
+  }
+
+  /* =====================================================
+     RENDER LIVES
+     ===================================================== */
+
+  function renderLives() {
+    const icons = $$('#lives-icons .life');
+    icons.forEach((el, i) => {
+      const wasLost = el.classList.contains('lost');
+      const isLost  = i >= lives;
+      if (isLost && !wasLost) {
+        // Newly lost — play shatter animation then settle to grey
+        el.classList.add('shattering');
+        el.addEventListener('animationend', () => {
+          el.classList.remove('shattering');
+          el.classList.add('lost');
+        }, { once: true });
+      } else {
+        el.classList.toggle('lost', isLost);
+      }
+    });
+  }
+
+  /* =====================================================
+     RENDER TILES
+     ===================================================== */
+
+  function getRemainingWords() {
+    const solvedWords = solvedCategories.flatMap(c => c.words);
+    return currentPuzzle.categories
+      .flatMap(c => c.words)
+      .filter(w => !solvedWords.includes(w));
+  }
+
+  let tileOrder = []; // current display order of remaining words
+
+  function renderGrid() {
+    const grid = $('tile-grid');
+    grid.innerHTML = '';
+
+    tileOrder.forEach(word => {
+      const btn = document.createElement('button');
+      btn.className   = 'tile';
+      btn.textContent = word;
+      btn.dataset.word = word;
+      btn.setAttribute('role', 'gridcell');
+      btn.setAttribute('aria-label', word);
+
+      if (selectedWords.includes(word)) {
+        btn.classList.add('selected');
+        btn.setAttribute('aria-pressed', 'true');
+      } else {
+        btn.setAttribute('aria-pressed', 'false');
+      }
+
+      btn.addEventListener('click', () => onTileClick(word));
+      grid.appendChild(btn);
+    });
+
+    updateControls();
+  }
+
+  function updateControls() {
+    const n = selectedWords.length;
+    $('deselect-btn').disabled = n === 0;
+    $('submit-btn').disabled   = n !== 4;
+  }
+
+  /* =====================================================
+     TILE CLICK
+     ===================================================== */
+
+  function onTileClick(word) {
+    if (gameOver) return;
+
+    const idx = selectedWords.indexOf(word);
+    if (idx >= 0) {
+      selectedWords.splice(idx, 1);
+    } else {
+      if (selectedWords.length >= 4) return; // already 4 selected
+      selectedWords.push(word);
+    }
+    renderGrid();
+  }
+
+  /* =====================================================
+     CHECK GUESS
+     ===================================================== */
+
+  function checkGuess() {
+    if (selectedWords.length !== 4 || gameOver) return;
+
+    // Find which category (if any) fully matches the selection
+    const unsolvedCats = currentPuzzle.categories.filter(
+      c => !solvedCategories.find(s => s.name === c.name)
+    );
+
+    const matchedCat = unsolvedCats.find(cat =>
+      selectedWords.every(w => cat.words.includes(w)) &&
+      cat.words.every(w => selectedWords.includes(w))
+    );
+
+    if (matchedCat) {
+      // ✅ Correct
+      solvedCategories.push(matchedCat);
+      selectedWords = [];
+      tileOrder = tileOrder.filter(w => !matchedCat.words.includes(w));
+
+      renderSolvedBars();
+      renderGrid();
+
+      if (solvedCategories.length === currentPuzzle.categories.length) {
+        // All solved — win!
+        setTimeout(() => endGame(true), 400);
+      }
+      return;
+    }
+
+    // Check "one away"
+    const oneAwayCat = unsolvedCats.find(cat => {
+      const intersection = selectedWords.filter(w => cat.words.includes(w));
+      return intersection.length === 3;
+    });
+
+    if (oneAwayCat) {
+      showToast('Close! One word off a round!');
+    }
+
+    // ❌ Wrong — shake tiles and lose a life
+    shakeSelectedTiles();
+    lives = Math.max(0, lives - 1);
+    renderLives();
+
+    if (lives === 0) {
+      setTimeout(() => endGame(false), 600);
+    }
+  }
+
+  function shakeSelectedTiles() {
+    const tiles = $$('#tile-grid .tile');
+    tiles.forEach(tile => {
+      if (selectedWords.includes(tile.dataset.word)) {
+        tile.classList.remove('shake');
+        // Force reflow to restart animation
+        void tile.offsetWidth;
+        tile.classList.add('shake');
+        tile.addEventListener('animationend', () => tile.classList.remove('shake'), { once: true });
+      }
+    });
+  }
+
+  /* =====================================================
+     RENDER SOLVED BARS
+     ===================================================== */
+
+  function renderSolvedBars() {
+    const area = $('solved-area');
+    area.innerHTML = '';
+    solvedCategories.forEach(cat => {
+      const bar = document.createElement('div');
+      bar.className = 'solved-bar';
+      const hex = COLOR_HEX[cat.color] || '#555';
+      bar.style.backgroundColor = hex;
+
+      // Neon glow effect: text-shadow and box-shadow
+      bar.style.textShadow = `0 0 8px ${hex}, 0 0 16px ${hex}88`;
+      bar.style.boxShadow  = `0 0 14px ${hex}99, 0 0 28px ${hex}44, inset 0 0 10px ${hex}22`;
+      bar.style.color      = '#0d0d0d';
+
+      const catName = document.createElement('div');
+      catName.textContent = cat.name.toUpperCase();
+
+      const words = document.createElement('div');
+      words.className = 'bar-words';
+      words.textContent = cat.words.join(', ');
+
+      bar.appendChild(catName);
+      bar.appendChild(words);
+      area.appendChild(bar);
+    });
+  }
+
+  let lastGameWin = false; // track win/loss for XP summary action
+
+  /* =====================================================
+     UPDATE XP BAR UI
+     ===================================================== */
+
+  function updateXPBar() {
+    const level  = playerProfile.level;
+    const needed = xpForLevel(level);
+    const pct    = Math.min(100, Math.round((playerProfile.xp / needed) * 100));
+
+    $('xp-level-label').textContent = `Lv ${level}`;
+    $('xp-text').textContent        = `${playerProfile.xp} / ${needed} XP`;
+    $('xp-fill').style.width        = pct + '%';
+    $('xp-track').setAttribute('aria-valuenow', pct);
+  }
+
+  /* =====================================================
+     END GAME
+     ===================================================== */
+
+  function endGame(win) {
+    gameOver = true;
+
+    // Disable tiles
+    $$('#tile-grid .tile').forEach(t => t.classList.add('disabled'));
+    $('submit-btn').disabled   = true;
+    $('deselect-btn').disabled = true;
+
+    // Update streak for wins
+    lastGameWin = win;
+    if (win) {
+      checkAndUpdateStreak();
+      playerProfile.totalWins += 1;
+    }
+    playerProfile.totalGames = (playerProfile.totalGames || 0) + 1;
+    saveProfile(playerProfile);
+
+    // Calculate XP gains
+    const gains = [];
+    const numSolved = solvedCategories.length;
+    if (numSolved > 0) {
+      gains.push({ label: `Categories Solved (×${numSolved})`, xp: numSolved * 100 });
+    }
+    if (win && lives === 4) {
+      gains.push({ label: 'Perfect Game Bonus 🏆', xp: 500 });
+    }
+    if (win && currentMode === 'daily') {
+      gains.push({ label: 'Daily Challenge Bonus 📅', xp: 250 });
+      saveDailyWin();
+    }
+
+    const totalXP = gains.reduce((s, g) => s + g.xp, 0);
+
+    // Apply XP
+    const levelBefore = playerProfile.level;
+    const xpBefore    = playerProfile.xp;
+    if (totalXP > 0) addXP(totalXP);
+
+    // In continuous mode, mark puzzle as played
+    if (currentMode === 'continuous') {
+      addPlayedId(currentPuzzle.id);
+    }
+
+    updateStreakDisplay();
+
+    // Show Experience Gained summary after a short delay
+    setTimeout(() => showXPSummary(win, gains, totalXP, levelBefore, xpBefore), 800);
+  }
+
+  /* =====================================================
+     EXPERIENCE GAINED SUMMARY
+     ===================================================== */
+
+  function showXPSummary(win, gains, totalXP, levelBefore, xpBefore) {
+    // Subtitle
+    $('xps-subtitle').textContent = win
+      ? `🍻 You won! ${playerProfile.currentStreak > 1 ? `🔥 ${playerProfile.currentStreak} Day Streak!` : ''}`
+      : 'Better luck next round!';
+
+    // Gains list
+    const list = $('xps-gains-list');
+    list.innerHTML = '';
+    if (gains.length === 0) {
+      const row = document.createElement('div');
+      row.className = 'xp-gain-row';
+      row.innerHTML = '<span class="xp-gain-label">No XP earned this round</span><span class="xp-gain-value">+0 XP</span>';
+      list.appendChild(row);
+    } else {
+      gains.forEach(g => {
+        const row = document.createElement('div');
+        row.className = 'xp-gain-row';
+        row.innerHTML = `<span class="xp-gain-label">${g.label}</span><span class="xp-gain-value">+${g.xp} XP</span>`;
+        list.appendChild(row);
+      });
+    }
+
+    // Total
+    $('xps-total').textContent = `+${totalXP} XP`;
+
+    // Mini XP bar — start from xpBefore percent, then animate to current
+    const neededBefore = xpForLevel(levelBefore);
+    const pctBefore    = Math.min(100, Math.round((xpBefore / neededBefore) * 100));
+    const needed       = xpForLevel(playerProfile.level);
+    const pctNow       = Math.min(100, Math.round((playerProfile.xp / needed) * 100));
+
+    $('summary-xp-fill').style.transition = 'none';
+    $('summary-xp-fill').style.width      = pctBefore + '%';
+    $('summary-level-label').textContent  =
+      `Level ${playerProfile.level} · ${getLevelTitle(playerProfile.level)} · ${playerProfile.xp}/${needed} XP`;
+
+    // Action button label
+    if (currentMode === 'continuous' && win) {
+      $('xps-action-btn').textContent = 'Next Round →';
+    } else if (currentMode === 'daily') {
+      $('xps-action-btn').textContent = win ? 'See You Tomorrow 👋' : 'Try Again Tomorrow';
+    } else {
+      $('xps-action-btn').textContent = 'OK';
+    }
+
+    $('xp-summary').classList.add('show');
+
+    // Animate XP bar after a short delay (allow the transition to be removed first)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        $('summary-xp-fill').style.transition = '';
+        $('summary-xp-fill').style.width      = pctNow + '%';
+      });
+    });
+  }
+
+  function showGameOverOverlay(win, streak) {
+    $('go-title').textContent = win ? '🎉 You Won!' : '💀 Game Over';
+    $('go-msg').textContent   = win
+      ? `Incredible! Bar Streak: ${streak} 🍺`
+      : 'Better luck next round. Here are the answers:';
+
+    // Show all categories
+    const answersEl = $('go-answers');
+    answersEl.innerHTML = '';
+    currentPuzzle.categories.forEach(cat => {
+      const row = document.createElement('div');
+      row.className = 'go-answer-row';
+      const hex = COLOR_HEX[cat.color] || '#555';
+      row.style.backgroundColor = hex;
+      row.style.color = '#0d0d0d';
+      row.innerHTML = `<div class="go-cat">${cat.name.toUpperCase()}</div>
+                       <div class="go-words">${cat.words.join(', ')}</div>`;
+      answersEl.appendChild(row);
+    });
+
+    $('game-over').classList.add('show');
+  }
+
+  /* =====================================================
+     STREAK DISPLAY
+     ===================================================== */
+
+  function updateStreakDisplay() {
+    const streak = playerProfile.currentStreak || 0;
+    $('streak-display').textContent = streak > 0
+      ? `🔥 Bar Streak: ${streak} day${streak !== 1 ? 's' : ''}`
+      : '';
+  }
+
+  /* =====================================================
+     INIT / LOAD PUZZLE
+     ===================================================== */
+
+  function loadPuzzle(puzzle) {
+    currentPuzzle    = puzzle;
+    solvedCategories = [];
+    selectedWords    = [];
+    lives            = 4;
+    gameOver         = false;
+
+    // Build tile order: all words, shuffled
+    const allWords = puzzle.categories.flatMap(c => c.words);
+    const seed     = hashString(puzzle.id + todayString());
+    const rand     = mulberry32(seed);
+    tileOrder      = seededShuffle(allWords, rand);
+
+    // Clear UI
+    $('solved-area').innerHTML = '';
+    $('next-btn').style.display = 'none';
+    $('game-over').classList.remove('show');
+    $('see-you-tomorrow').classList.remove('show');
+
+    renderLives();
+    renderGrid();
+    updateStreakDisplay();
+  }
+
+  function initGame() {
+    if (currentMode === 'daily') {
+      const puzzle = selectDailyPuzzle();
+      loadPuzzle(puzzle);
+
+      if (hasDailyWin()) {
+        showToast("You've already completed today's puzzle! Try Continuous mode.", 4000);
+        $('submit-btn').disabled   = true;
+        $('shuffle-btn').disabled  = true;
+        $('deselect-btn').disabled = true;
+        $$('#tile-grid .tile').forEach(t => t.classList.add('disabled'));
+        gameOver = true;
+      }
+
+      $('mode-label').textContent = `📅 Daily Challenge · ${todayString()}`;
+    } else {
+      const puzzle = selectContinuousPuzzle();
+      loadPuzzle(puzzle);
+      $('mode-label').textContent = `🔁 Continuous Mode · Puzzle #${puzzle.id}`;
+    }
+    updateXPBar();
+  }
+
+  /* =====================================================
+     EVENT LISTENERS
+     ===================================================== */
+
+  /* =====================================================
+     STATS MODAL
+     ===================================================== */
+
+  function openStatsModal() {
+    const p     = playerProfile;
+    const level = p.level;
+    const title = getLevelTitle(level);
+
+    $('stats-rank-label').textContent = `${title} · Level ${level}`;
+    $('stat-level').textContent = level;
+    $('stat-xp').textContent    = p.xp;
+    $('stat-wins').textContent  = p.totalWins || 0;
+    $('stat-streak').textContent = p.longestStreak || 0;
+
+    $('stats-modal').classList.add('show');
+  }
+
+  $('stats-btn').addEventListener('click', openStatsModal);
+
+  $('close-stats-btn').addEventListener('click', () => {
+    $('stats-modal').classList.remove('show');
+  });
+
+  $('stats-modal').addEventListener('click', e => {
+    if (e.target === $('stats-modal')) $('stats-modal').classList.remove('show');
+  });
+
+  $('share-btn').addEventListener('click', () => {
+    const p      = playerProfile;
+    const title  = getLevelTitle(p.level);
+    const streak = p.currentStreak || 0;
+    const text   = streak > 0
+      ? `I'm a Level ${p.level} ${title} at BarBuzzer! 🔥 ${streak} Day Streak.`
+      : `I'm a Level ${p.level} ${title} at BarBuzzer!`;
+    if (navigator.share) {
+      navigator.share({ text }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Stats copied to clipboard!', 2500);
+        $('stats-modal').classList.remove('show');
+      }).catch(() => showToast(text, 5000));
+    } else {
+      showToast(text, 5000);
+    }
+  });
+
+  /* ===== XP Summary action button ===== */
+  $('xps-action-btn').addEventListener('click', () => {
+    $('xp-summary').classList.remove('show');
+    if (currentMode === 'continuous' && lastGameWin) {
+      // Next Round — load a new puzzle immediately
+      const puzzle = selectContinuousPuzzle();
+      loadPuzzle(puzzle);
+      $('mode-label').textContent = `🔁 Continuous Mode · Puzzle #${puzzle.id}`;
+      updateXPBar();
+    } else if (currentMode === 'daily' && lastGameWin) {
+      // Show "See You Tomorrow" modal for daily wins
+      showSeeYouTomorrow();
+    } else {
+      // Show game-over overlay so the player can see answers / what happened
+      showGameOverOverlay(lastGameWin, playerProfile.currentStreak);
+    }
+  });
+
+  /* ===== See You Tomorrow modal ===== */
+  function showSeeYouTomorrow() {
+    const streak = playerProfile.currentStreak || 0;
+    $('syt-streak').textContent = streak > 1
+      ? `🔥 ${streak} Day Streak — Keep it going!`
+      : '';
+    $('syt-msg').textContent = 'You\'ve conquered today\'s Daily Challenge. Come back tomorrow for a fresh round!';
+    $('see-you-tomorrow').classList.add('show');
+  }
+
+  $('syt-btn').addEventListener('click', () => {
+    $('see-you-tomorrow').classList.remove('show');
+  });
+
+  $('see-you-tomorrow').addEventListener('click', e => {
+    if (e.target === $('see-you-tomorrow')) $('see-you-tomorrow').classList.remove('show');
+  });
+
+  // Mode buttons
+  $$('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.mode === currentMode) return;
+      currentMode = btn.dataset.mode;
+      $$('.mode-btn').forEach(b => {
+        b.classList.toggle('active', b.dataset.mode === currentMode);
+        b.setAttribute('aria-pressed', b.dataset.mode === currentMode ? 'true' : 'false');
+      });
+      initGame();
+    });
+  });
+
+  // Shuffle
+  $('shuffle-btn').addEventListener('click', () => {
+    tileOrder = shuffle(tileOrder);
+    renderGrid();
+  });
+
+  // Deselect
+  $('deselect-btn').addEventListener('click', () => {
+    selectedWords = [];
+    renderGrid();
+  });
+
+  // Submit
+  $('submit-btn').addEventListener('click', checkGuess);
+
+  // Next Round (continuous)
+  $('next-btn').addEventListener('click', () => {
+    $('next-btn').style.display = 'none';
+    const puzzle = selectContinuousPuzzle();
+    loadPuzzle(puzzle);
+    $('mode-label').textContent = `🔁 Continuous Mode · Puzzle #${puzzle.id}`;
+  });
+
+  // Game over overlay close
+  $('go-btn').addEventListener('click', () => {
+    $('game-over').classList.remove('show');
+  });
+
+  // Close overlay on backdrop click
+  $('game-over').addEventListener('click', e => {
+    if (e.target === $('game-over')) $('game-over').classList.remove('show');
+  });
+
+  /* =====================================================
+     BOOT
+     ===================================================== */
+
+  updateXPBar();
+  updateStreakDisplay();
+  initGame();
+
+  </script>
+
+</body>
+</html>
